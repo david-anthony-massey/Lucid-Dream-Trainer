@@ -186,7 +186,7 @@ function drawLoop(bool) {
   else canvasContext.fillStyle = 'green';
 
   // console.log(meter.volume);
-  if (meter.volume > 0.07 && bool) {
+  if (meter.volume > 0.06 && bool) {
     chooseLooks += 1;
     // let word = new SpeechSynthesisUtterance(
     //   `${electronFs.readFileSync('signals.txt', 'utf8').slice(-30)}`,
@@ -304,14 +304,14 @@ function checkForREM() {
   // console.log('c4rem');
   let dataArr = electronFs
     .readFileSync('signals.txt', 'utf8')
-    .slice(-1009)
+    .slice(-2185)
     .split('ß');
 
   let firstVal = dataArr[0].split(',')[0];
-  //console.log('dataArr', dataArr);
+  // console.log('dataArr', dataArr);
   // console.log('firstVal', firstVal);
   // console.log('lastVal', lastVal);
-  if (dataArr.length === 43) {
+  if (dataArr.length === 92) {
     //console.log('length22');
     if (firstVal >= 0.01 && firstVal <= 0.04) {
       let avg1 = 0;
@@ -320,9 +320,9 @@ function checkForREM() {
       let avg4 = 0;
       for (let j = 0; j < 7; j++) {
         avg1 += parseFloat(dataArr[j].split(',')[0]);
-        avg2 += parseFloat(dataArr[j + 7].split(',')[0]);
-        avg3 += parseFloat(dataArr[j + 14].split(',')[0]);
-        avg4 += parseFloat(dataArr[j + 21].split(',')[0]);
+        avg2 += parseFloat(dataArr[j + 28].split(',')[0]);
+        avg3 += parseFloat(dataArr[j + 55].split(',')[0]);
+        avg4 += parseFloat(dataArr[j + 84].split(',')[0]);
       }
 
       avg1 = avg1 / 7;
@@ -335,7 +335,10 @@ function checkForREM() {
       console.log('avg3', avg3);
       console.log('avg4', avg4);
 
-      if (avg1 - avg2 < -0.02 && avg3 - avg4 > 0.01) {
+      if (
+        (avg1 - avg2 > 0.005 && avg3 - avg4 < -0.018) ||
+        (avg3 - avg4 > 0.005 && avg1 - avg2 < -0.018)
+      ) {
         alert('poop ');
         return true;
       }
@@ -363,24 +366,12 @@ function shuffle(array) {
 
 function createCards(questions, answers) {
   console.log('answers', answers);
-  for (let i = 0; i < questions.length; i++) {
-    let randomAnsObj = { C: i };
-    let randomAnsArr = [];
-    let correctAnswerSpot = 4;
-    while (randomAnsArr.length < 3) {
-      let possibleWrongAnswer = Math.floor(Math.random() * questions.length);
-      if (
-        randomAnsObj[possibleWrongAnswer] === undefined &&
-        i !== possibleWrongAnswer
-      ) {
-        randomAnsObj[possibleWrongAnswer] = possibleWrongAnswer;
-        randomAnsArr.push(answers[possibleWrongAnswer]);
-      }
-    }
-
-    if (Math.floor(Math.random() * (5 + 1)) === 1) {
-      console.log('the correct answer is none');
-      while (randomAnsArr.length < 4) {
+  for (let j = 0; j < 4; j++) {
+    for (let i = 0; i < questions.length; i++) {
+      let randomAnsObj = { C: i };
+      let randomAnsArr = [];
+      let correctAnswerSpot = 4;
+      while (randomAnsArr.length < 3) {
         let possibleWrongAnswer = Math.floor(Math.random() * questions.length);
         if (
           randomAnsObj[possibleWrongAnswer] === undefined &&
@@ -390,26 +381,41 @@ function createCards(questions, answers) {
           randomAnsArr.push(answers[possibleWrongAnswer]);
         }
       }
-    } else {
-      randomAnsArr.push(answers[randomAnsObj['C']]);
-      correctAnswerSpot = Math.floor(Math.random() * (3 + 1));
-      console.log(
-        'randomAnsArr',
-        randomAnsArr,
-        'correctAnswerSpot',
-        correctAnswerSpot,
-      );
-      [randomAnsArr[correctAnswerSpot], randomAnsArr[3]] = [
-        randomAnsArr[3],
-        randomAnsArr[correctAnswerSpot],
-      ];
+
+      if (Math.floor(Math.random() * (5 + 1)) === 1) {
+        console.log('the correct answer is none');
+        while (randomAnsArr.length < 4) {
+          let possibleWrongAnswer = Math.floor(
+            Math.random() * questions.length,
+          );
+          if (
+            randomAnsObj[possibleWrongAnswer] === undefined &&
+            i !== possibleWrongAnswer
+          ) {
+            randomAnsObj[possibleWrongAnswer] = possibleWrongAnswer;
+            randomAnsArr.push(answers[possibleWrongAnswer]);
+          }
+        }
+      } else {
+        randomAnsArr.push(answers[randomAnsObj['C']]);
+        correctAnswerSpot = Math.floor(Math.random() * (3 + 1));
+        console.log(
+          'randomAnsArr',
+          randomAnsArr,
+          'correctAnswerSpot',
+          correctAnswerSpot,
+        );
+        [randomAnsArr[correctAnswerSpot], randomAnsArr[3]] = [
+          randomAnsArr[3],
+          randomAnsArr[correctAnswerSpot],
+        ];
+      }
+
+      randomAnsArr.push("The correct definition wasn't one of the answers");
+
+      cards.push([questions[i], randomAnsArr, answers[i], correctAnswerSpot]);
     }
-
-    randomAnsArr.push("The correct definition wasn't one of the answers");
-
-    cards.push([questions[i], randomAnsArr, correctAnswerSpot]);
   }
-
   return cards;
 }
 
@@ -425,48 +431,63 @@ async function readCards(cards) {
     await getNextAudio(cards[i][0]);
     await getSilence(2);
     await getSilence(2);
-    isCorrect = false;
-    if (cards[i][2] == 0) {
-      console.log('look right, this is the right answer');
-      isCorrect = true;
-    }
+    await getSilence(2);
+    await getNextAudio(cards[i][0]);
     await getNextAudio(cards[i][1][0]);
-    await getSilence(2);
-    await getSilence(2);
     isCorrect = false;
-    if (cards[i][2] == 1) {
+    if (cards[i][3] == 0) {
       console.log('look right, this is the right answer');
       isCorrect = true;
     }
-    await getNextAudio(cards[i][1][1]);
     await getSilence(2);
-    await getSilence(2);
-    isCorrect = false;
-    if (cards[i][2] == 2) {
-      console.log('look right, this is the right answer');
-      isCorrect = true;
-    }
-    await getNextAudio(cards[i][1][2]);
-    await getSilence(2);
-    await getSilence(2);
-    isCorrect = false;
-    if (cards[i][2] == 3) {
-      console.log('look right, this is the right answer');
-      isCorrect = true;
-    }
-    await getNextAudio(cards[i][1][3]);
-    await getSilence(2);
-    await getSilence(2);
-    isCorrect = false;
-    if (cards[i][2] == 4) {
-      console.log('look right, this is the right answer');
-      isCorrect = true;
-    }
-    await getNextAudio(cards[i][1][4]);
     await getSilence(2);
     await getSilence(2);
     isCorrect = 'wait';
-    await getNextAudio(cards[i][1][cards[i][2]]);
+    await getNextAudio(cards[i][0]);
+    await getNextAudio(cards[i][1][1]);
+    isCorrect = false;
+    if (cards[i][3] == 1) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getSilence(2);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = 'wait';
+    await getNextAudio(cards[i][0]);
+    await getNextAudio(cards[i][1][2]);
+    isCorrect = false;
+    if (cards[i][3] == 2) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getSilence(2);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = 'wait';
+    await getNextAudio(cards[i][0]);
+    await getNextAudio(cards[i][1][3]);
+    isCorrect = false;
+    if (cards[i][3] == 3) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getSilence(2);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = 'wait';
+    await getNextAudio(cards[i][0]);
+    await getNextAudio(cards[i][1][4]);
+    isCorrect = false;
+    if (cards[i][3] == 4) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getSilence(2);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = 'wait';
+    await getCorrectAudio(cards[i][2]);
     await getSilence(2);
     await getSilence(2);
     await getSilence(2);
@@ -477,6 +498,27 @@ async function readCards(cards) {
     let audioRate = rate || 1;
     console.log(sentence);
     let audio = new SpeechSynthesisUtterance(sentence);
+    audio.rate = audioRate;
+
+    var voices2 = window.speechSynthesis.getVoices();
+
+    audio.voice = voices2.filter(function(voice) {
+      return voice.name == 'Karen';
+    })[0];
+
+    window.speechSynthesis.speak(audio);
+
+    return new Promise(resolve => {
+      audio.onend = resolve;
+    });
+  }
+
+  async function getCorrectAudio(sentence, rate) {
+    let audioRate = rate || 1;
+    console.log(sentence);
+    let audio = new SpeechSynthesisUtterance(
+      'The correct answer is ' + sentence,
+    );
     audio.rate = audioRate;
 
     var voices2 = window.speechSynthesis.getVoices();
