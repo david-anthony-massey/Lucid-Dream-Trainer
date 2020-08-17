@@ -83,6 +83,28 @@ var testStarted = false;
 var answerChoices = [];
 var chooseLooks = 0;
 var cards = [];
+var isCorrect = '';
+var correct = 0;
+var incorrect = 0;
+var tooEarly = 0;
+
+function setSpeech() {
+  return new Promise(function(resolve, reject) {
+    let synth = window.speechSynthesis;
+    let id;
+
+    id = setInterval(() => {
+      if (synth.getVoices().length !== 0) {
+        resolve(synth.getVoices());
+        clearInterval(id);
+      }
+    }, 10);
+  });
+}
+
+var voices = setSpeech();
+voices.then(voice => console.log(voice));
+
 window.onload = function() {
   // make flashcards
 
@@ -170,8 +192,31 @@ function drawLoop(bool) {
     //   `${electronFs.readFileSync('signals.txt', 'utf8').slice(-30)}`,
     // );
 
-    // //let word = new SpeechSynthesisUtterance('You looked to the right');
-    // window.speechSynthesis.speak(word);
+    if (isCorrect === 'wait') {
+      tooEarly += 1;
+      let wait = document.getElementById('rightWrong-audio');
+      let source = document.getElementById('rightWrong-audio-source');
+      source.src = 'wait.wav';
+      wait.load();
+      wait.volume = 0.2;
+      wait.play();
+    } else if (isCorrect === true) {
+      correct += 1;
+      let right = document.getElementById('rightWrong-audio');
+      let source = document.getElementById('rightWrong-audio-source');
+      source.src = 'TP_Secret.wav';
+      right.load();
+      right.volume = 0.2;
+      right.play();
+    } else if (isCorrect === false) {
+      incorrect += 1;
+      let right = document.getElementById('rightWrong-audio');
+      let source = document.getElementById('rightWrong-audio-source');
+      source.src = 'TP_Pot_Shatter2.wav';
+      right.load();
+      right.volume = 0.2;
+      right.play();
+    }
 
     // draw a bar based on the current volume
     canvasContext.fillRect(0, 0, meter.volume * WIDTH * 1.4, HEIGHT);
@@ -317,15 +362,17 @@ function shuffle(array) {
 }
 
 function createCards(questions, answers) {
+  console.log('answers', answers);
   for (let i = 0; i < questions.length; i++) {
     let randomAnsObj = { C: i };
     let randomAnsArr = [];
     let correctAnswerSpot = 4;
     while (randomAnsArr.length < 3) {
-      let possibleWrongAnswer = Math.floor(
-        Math.random() * (questions.length + 1),
-      );
-      if (randomAnsObj[possibleWrongAnswer] === undefined) {
+      let possibleWrongAnswer = Math.floor(Math.random() * questions.length);
+      if (
+        randomAnsObj[possibleWrongAnswer] === undefined &&
+        i !== possibleWrongAnswer
+      ) {
         randomAnsObj[possibleWrongAnswer] = possibleWrongAnswer;
         randomAnsArr.push(answers[possibleWrongAnswer]);
       }
@@ -334,10 +381,11 @@ function createCards(questions, answers) {
     if (Math.floor(Math.random() * (5 + 1)) === 1) {
       console.log('the correct answer is none');
       while (randomAnsArr.length < 4) {
-        let possibleWrongAnswer = Math.floor(
-          Math.random() * (questions.length + 1),
-        );
-        if (randomAnsObj[possibleWrongAnswer] === undefined) {
+        let possibleWrongAnswer = Math.floor(Math.random() * questions.length);
+        if (
+          randomAnsObj[possibleWrongAnswer] === undefined &&
+          i !== possibleWrongAnswer
+        ) {
           randomAnsObj[possibleWrongAnswer] = possibleWrongAnswer;
           randomAnsArr.push(answers[possibleWrongAnswer]);
         }
@@ -345,6 +393,12 @@ function createCards(questions, answers) {
     } else {
       randomAnsArr.push(answers[randomAnsObj['C']]);
       correctAnswerSpot = Math.floor(Math.random() * (3 + 1));
+      console.log(
+        'randomAnsArr',
+        randomAnsArr,
+        'correctAnswerSpot',
+        correctAnswerSpot,
+      );
       [randomAnsArr[correctAnswerSpot], randomAnsArr[3]] = [
         randomAnsArr[3],
         randomAnsArr[correctAnswerSpot],
@@ -360,24 +414,93 @@ function createCards(questions, answers) {
 }
 
 async function readCards(cards) {
-  let all =
-    'Oak is strong and also gives shade \n \
-            Cats and dogs each hate the other \n \
-            The pipe began to rust while new \n Bye.';
-
-  sentences = all.split('\n');
-
-  for (i = 0; i < sentences.length; i++) {
-    await getNextAudio(sentences[i]);
+  console.log(cards);
+  for (i = 0; i < cards.length; i++) {
+    console.log(cards[i][1]);
+    isCorrect = 'wait';
+    await getNextAudio(cards[i][0]);
+    await getSilence(2);
+    await getNextAudio(cards[i][0].split('').join('. '), 0.9);
+    await getSilence(2);
+    await getNextAudio(cards[i][0]);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = false;
+    if (cards[i][2] == 0) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getNextAudio(cards[i][1][0]);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = false;
+    if (cards[i][2] == 1) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getNextAudio(cards[i][1][1]);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = false;
+    if (cards[i][2] == 2) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getNextAudio(cards[i][1][2]);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = false;
+    if (cards[i][2] == 3) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getNextAudio(cards[i][1][3]);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = false;
+    if (cards[i][2] == 4) {
+      console.log('look right, this is the right answer');
+      isCorrect = true;
+    }
+    await getNextAudio(cards[i][1][4]);
+    await getSilence(2);
+    await getSilence(2);
+    isCorrect = 'wait';
+    await getNextAudio(cards[i][1][cards[i][2]]);
+    await getSilence(2);
+    await getSilence(2);
+    await getSilence(2);
+    await getSilence(2);
   }
 
-  async function getNextAudio(sentence) {
+  async function getNextAudio(sentence, rate) {
+    let audioRate = rate || 1;
     console.log(sentence);
     let audio = new SpeechSynthesisUtterance(sentence);
+    audio.rate = audioRate;
+
+    var voices2 = window.speechSynthesis.getVoices();
+
+    audio.voice = voices2.filter(function(voice) {
+      return voice.name == 'Karen';
+    })[0];
+
     window.speechSynthesis.speak(audio);
 
     return new Promise(resolve => {
       audio.onend = resolve;
+    });
+  }
+
+  async function getSilence(seconds) {
+    let silenceAudioElement = document.getElementById('silence-audio');
+    let source = document.getElementById('silence-audio-source');
+    source.src = `${seconds}sec.mp3`;
+    silenceAudioElement.load();
+    silenceAudioElement.play();
+
+    return new Promise(resolve => {
+      silenceAudioElement.onended = resolve;
     });
   }
 }
