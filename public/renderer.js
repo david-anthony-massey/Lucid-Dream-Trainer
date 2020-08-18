@@ -336,10 +336,10 @@ function checkForREM() {
       console.log('avg4', avg4);
 
       if (
-        (avg1 - avg2 > 0.005 && avg3 - avg4 < -0.018) ||
-        (avg3 - avg4 > 0.005 && avg1 - avg2 < -0.018)
+        (avg1 - avg2 > 0.01 && avg3 - avg4 < -0.02) ||
+        (avg3 - avg4 > 0.01 && avg1 - avg2 < -0.02)
       ) {
-        alert('poop ');
+        //alert('poop ');
         return true;
       }
       return false;
@@ -476,7 +476,6 @@ async function readCards(cards) {
     await getSilence(2);
     await getSilence(2);
     isCorrect = 'wait';
-    await getNextAudio(cards[i][0]);
     await getNextAudio(cards[i][1][4]);
     isCorrect = false;
     if (cards[i][3] == 4) {
@@ -545,4 +544,6 @@ async function readCards(cards) {
       silenceAudioElement.onended = resolve;
     });
   }
+
+  testStarted = false;
 }
